@@ -62,7 +62,7 @@ npm run dev
 | 气象监测 | `weather` | 气象数据 | 站点编号、辐照度、风速 |
 | 并网调度 | `grid_connect` | 调度指令 | 指令编号、调度机构、指令内容 |
 | 电缆线路 | `cable` | 电缆段 | 电缆编号、电缆型号、起止位置 |
-| 安防巡视 | `security` | 安防记录 | 巡视编号、巡视区域、巡视人员 |
+| 安防巡视 | `security` | 安防记录 | 巡视编号、巡视区域、巡视人员、巡视班次 |
 | 定期检修 | `maintenance` | 检修计划 | 计划编号、设备名称、检修级别 |
 | 汇流箱管理 | `dc_box` | 汇流箱 | 汇流箱编号、所属组串、输入支路 |
 | 能效分析 | `energy_saving` | 能效报告 | 报告编号、电站编号、分析周期 |
@@ -74,3 +74,16 @@ npm run dev
   `backend/app/routers/<模块>.py`，业务规则在 `backend/app/services/<模块>.py`。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+
+## 安防巡视班次核对流程
+
+安防现场记录按巡视班次形成结果文件，接口前缀 `/api/security`：
+
+1. `POST /shifts/{班次}/stage`：把本班记录放进取样核对区（核对状态变为「待核对」）。
+2. `POST /shifts/{班次}/review`：按巡视区域和人员逐项核对；重复巡视编号的记录
+   留在待修正清单（`GET /shifts/{班次}/corrections`），用
+   `POST /{id}/correct` 换上新编号后自动复核对。
+3. `POST /shifts/{班次}/confirm`：核对无误后打包交接文件；本班无异常时同时生成
+   说明文件，已生成的文件走 `GET /shifts/{班次}/files` 查看。
+
+未核对或待修正的记录会被确认环节拦下，不进入正式记录。
